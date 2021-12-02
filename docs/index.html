@@ -45,23 +45,33 @@ title: Constrained Mean Shift Using Distant Yet Related Neighbors for Representa
 
 <h5 id="contributions"><b>Contributions</b></h5>
   <p> 
-    We introduce a simple but effective mean-shift algorithm to group similar images together in the neighborhood of each image in an 
-    online fashion. The idea is to simply find the nearest neighbors of a query image in the embedding space and pull the embedding of 
-    query to be closer to the center of those neighbors. We believe this process will result in developing clusters of images in the
-    embedding space without enforcing much constraints about their specific size, number, or shape. Note that in contrast to grouping (pulling)
-    in our method, MoCo pushes the query to be far from any other data points particularly nearest neighbors by which the loss will be dominated.
-    
+    We argue that the top-k neighbors are close to the query image by construction, and thus may not provide a strong supervision signal.
+    We are interested in choosing far away (non-top) neighbors that are still semantically related to the query image. 
+    This cannot be trivially achieved by increasing the number of NNs since the purity of retrieved neighbors decreases with increasing k
+    , where the purity is defined as the percentage of the NNs belonging to the same semantic category as the query image.    
+  </p>
+  
+  <p>
+    We generalize MSF[15] method by simply limiting the NN search to a smaller subset that we believe is semantically related to query. 
+    We define this constraint to be the NNs of another query augmentation in SSL setting and images sharing the same label or pseudo-label
+    in supervised and semi-supervised settings.
+  </p>
+  
+  <p>
+    Our experiments show that the method outperforms the various baselines in all three settings with same or less amount of computation in training. 
+    It outperforms MSF[15] in SSL, cross-entropy in supervised (with clean or noisy labels), and PAWS[3] in semi-supervised settings.
   </p>
 
   
     <p> 
-  For two random query images, we show how the nearest neighbors evolve at the learning time. Initially, NNs are not semantically 
-    quite related, but are close in low-level features. The accuracy of 1-NN classifier in the initialization is 1.5% which is 15
-    times larger than random chance (0.01%). This little signal is bootstrapped in our learning method and results in NNs of the 
-    late epochs which are mostly semantically related to the query image.
+   We report the total training FLOPs for forward and backward passes through the CNN backbone.
+      <strong>(Left) Self-supervised:</strong> All methods are trained on ResNet-50 backbone for 200 epochs. 
+      CMSF achieves competitive accuracy with considerably lower compute. <strong>(Right) Semi-supervised:</strong> 
+      Circle radius is proportional to the number of GPUs/TPUs used. In addition to being compute efficient, CMSF is 
+      trained with an order of magnitude lower resources, making it more practical and accessible.
   </p>
 
-<p style="text-align:center;"><img src="{{ site.baseurl }}/assets/images/fig1.jpg" width="100%" alt style></p>
+<p style="text-align:center;"><img src="{{ site.baseurl }}/assets/images/compute.jpg" width="100%" alt style></p>
     
   
 
