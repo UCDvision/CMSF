@@ -1,0 +1,8 @@
+@InProceedings{Koohpayegani_2021_ICCV,
+    author    = {Koohpayegani, Soroush Abbasi and Tejankar, Ajinkya and Pirsiavash, Hamed},
+    title     = {Mean Shift for Self-Supervised Learning},
+    booktitle = {Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV)},
+    month     = {October},
+    year      = {2021},
+    pages     = {10326-10335}
+}
