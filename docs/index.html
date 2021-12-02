@@ -1,10 +1,16 @@
 ---
 layout: default
-title: Mean Shift for Self-Supervised Learning 
+title: Constrained Mean Shift Using Distant Yet Related Neighbors for Representation Learning 
 ---
 
 <div style="height:25px;">
-<p style="text-align:center;"><a href="https://soroush-abbasi.github.io/">Soroush Abbasi Koohpayegani</a><sup>1,∗</sup>, <a href="https://www.linkedin.com/in/ajinkya-tejankar/">Ajinkya Tejankar</a><sup>1,∗</sup>, <a href="https://www.csee.umbc.edu/~hpirsiav/">Hamed Pirsiavash</a><sup>2</sup></p>
+<p style="text-align:center;">
+  <a href="https://www.linkedin.com/in/ajinkya-tejankar/">Ajinkya Tejankar</a><sup>1,∗</sup>, 
+  <a href="https://soroush-abbasi.github.io/">Soroush Abbasi Koohpayegani</a><sup>1,∗</sup>,
+  <a href="#">K L Navaneet</a><sup>1,∗</sup>,
+  <a href="#">Kossar Pourahmadi</a><sup>1</sup>, 
+  <a href="#">Akshayvarun Subramanya</a><sup>1</sup>,
+  <a href="https://www.csee.umbc.edu/~hpirsiav/">Hamed Pirsiavash</a><sup>2</sup></p>
 </div>
 <div style="height:25px;">
 <p style="text-align:center;"><sup>1</sup>University of Maryland, Baltimore County, <sup>2</sup>University of California, Davis</p>
@@ -17,24 +23,24 @@ title: Mean Shift for Self-Supervised Learning
   <ul style="margin: 0px;">
       <li><a href='https://www.csee.umbc.edu/~hpirsiav/papers/MSF_iccv21.pdf'>[Paper]</a></li>
       <li><a href='{{ site.baseurl }}/assets/images/MSF_poster.pdf'>[Poster]</a></li>
-      <li><a href='https://github.com/UMBCvision/MSF'>[Code]</a></li>
-      <li><a href='/MSF/bib.txt'>[Bib]</a></li>
+      <li><a href='https://github.com/UCDvision/CMSF'>[Code]</a></li>
+      <li><a href='/CMSF/bib.txt'>[Bib]</a></li>
   </ul>
 </div>
 
 <div>
 <p style="text-align:center;"><img src="{{ site.baseurl }}/assets/images/teaser.gif" width="100%" alt style></p>
-<p align="center">
-  <iframe width="560" height="315" src="https://www.youtube.com/embed/WWF3DqbcIjY" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-  </p>
+
   
 <h5 id="abstract"><b>Abstract</b></h5>
-<p>Most recent self-supervised learning (SSL) algorithms learn features by contrasting between instances of images or by clustering the 
-  images and then contrasting between the image clusters. We introduce a simple mean-shift algorithm that learns representations by grouping images
-  together without contrasting between them or adopting much of prior on the structure of the clusters. We simply "shift" the embedding of each
-  image to be close to the "mean" of its neighbors. Since in our setting, the closest neighbor is always another augmentation of the same image,
-  our model will be identical to BYOL when using only one nearest neighbor instead of 5 as used in our experiments. Our model achieves 72.4%
-  on ImageNet linear evaluation with ResNet50 at 200 epochs outperforming BYOL.</p>
+<p>We are interested in representation learning in self-supervised, supervised, or semi-supervised settings. 
+  The prior work on applying mean-shift idea for self-supervised learning, MSF, generalizes the BYOL idea by
+  pulling a query image to not only be closer to its other augmentation, but also to the nearest neighbors (NNs)
+  of its other augmentation. We believe the learning can benefit from choosing far away neighbors that are still
+  semantically related to the query. Hence, we propose to generalize MSF algorithm by constraining the search 
+  space for nearest neighbors. We show that our method outperforms MSF in SSL setting when the constraint 
+  utilizes a different augmentation of an image, and outperforms PAWS in semi-supervised setting with less 
+  training resources when the constraint ensures the NNs have the same pseudo-label as the query.</p>
 
 <h5 id="contributions"><b>Contributions</b></h5>
   <p> 
@@ -43,7 +49,6 @@ title: Mean Shift for Self-Supervised Learning
     query to be closer to the center of those neighbors. We believe this process will result in developing clusters of images in the
     embedding space without enforcing much constraints about their specific size, number, or shape. Note that in contrast to grouping (pulling)
     in our method, MoCo pushes the query to be far from any other data points particularly nearest neighbors by which the loss will be dominated.
-    
     
   </p>
 
