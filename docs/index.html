@@ -88,7 +88,7 @@ We use different constraint selection techniques to analyze our method in superv
   
   
 <p>
-      We augment an image twice and pass them through online and target encoders followed by l2 normalization to get u and v. 
+      We augment an image twice and pass them through online and target encoders followed by l<sub>2</sub> normalization to get u and v. 
   Mean-shift[15] encourages v to be close to both u and its nearest neighbors (NN). Here, we constrain the NN pool based on 
   additional knowledge in the form of supervised labels, classifier or previous augmentation based pseudo-labels. 
   These constraints ensure that the query is pulled towards semantically related NNs that are farther away from the target feature.
@@ -96,8 +96,8 @@ We use different constraint selection techniques to analyze our method in superv
 
 <p style="text-align:center;"><img src="{{ site.baseurl }}/assets/images/teaser.gif" width="90%" alt style></p>
 
-  
-    <strong> Self-Supervised Settings:</strong>
+  <h6 id="Method"><b>Self-Supervised Settings:</b></h6>
+
   <p> 
     In the initial stages of learning two diverse augmentations of an image are not very close to each other in the embedding space. 
     Thus, one way of choosing far away NNs for the target u with high purity is to limit the neighbor search space based on the NNs 
@@ -105,14 +105,24 @@ We use different constraint selection techniques to analyze our method in superv
   </p>
   
   
-  <strong> CMSF-KM:</strong>
+  
   <p>
+    <strong> CMSF-KM:</strong>
 Here, we perform clustering at the end of each epoch (using the cached embeddings of that epoch) and define 
     C to be a subset of M that shares the same cluster assignment as the target. Similar to MSF, we then use top-k 
     NNs of target u from constrained set C for loss calculation to maintain high purity. Since augmentations are chosen 
     randomly and independently at each epoch, cluster assignment and distance minimization happen with different augmentations. 
     Even though members of a cluster are close to each other in the previous epoch, the set C may not be close to the current target. 
     This improves learning by averaging distant samples with a good purity.
+  </p>
+  
+  <p>
+    <strong> CMSF-2Q:</strong>
+We propose this method to show the importance of using a different augmentation to constrain the NN search space. 
+In addition to M, we maintain a second memory bank M' that is exactly the same as M but containing a different (third) augmentation of the query image.
+We assume w<sub>i</sub> <span>&#8712;</span> M' and u<sub>i</sub> <span>&#8712;</span> M are two embeddings corresponding to the same image x<sub>i</sub>i. Then,
+    for image x<sub>i</sub>, we find NNs of w<sub>i</sub> in M' and use their indices to construct the search space C from M. 
+    As a result, C will maintain good purity while being diverse.
   </p>
   
 <h5 id="results"><b>Self-supervised Learning Results</b></h5>
