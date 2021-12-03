@@ -88,7 +88,7 @@ We use different constraint selection techniques to analyze our method in superv
   
   
 <p>
-      We augment an image twice and pass them through online and target encoders followed by l<sub>2</sub> normalization to get u and v. 
+      We augment an image twice and pass them through online and target encoders followed by L<sub>2</sub> normalization to get u and v. 
   Mean-shift[15] encourages v to be close to both u and its nearest neighbors (NN). Here, we constrain the NN pool based on 
   additional knowledge in the form of supervised labels, classifier or previous augmentation based pseudo-labels. 
   These constraints ensure that the query is pulled towards semantically related NNs that are farther away from the target feature.
@@ -96,7 +96,7 @@ We use different constraint selection techniques to analyze our method in superv
 
 <p style="text-align:center;"><img src="{{ site.baseurl }}/assets/images/teaser.gif" width="90%" alt style></p>
 
-  <h6 id="Method"><b>Self-Supervised Settings:</b></h6>
+  <h5 id="Method"><b>Self-Supervised Settings:</b></h5>
 
   <p> 
     In the initial stages of learning two diverse augmentations of an image are not very close to each other in the embedding space. 
@@ -120,10 +120,24 @@ Here, we perform clustering at the end of each epoch (using the cached embedding
     <strong> CMSF-2Q:</strong>
 We propose this method to show the importance of using a different augmentation to constrain the NN search space. 
 In addition to M, we maintain a second memory bank M' that is exactly the same as M but containing a different (third) augmentation of the query image.
-We assume w<sub>i</sub> <span>&#8712;</span> M' and u<sub>i</sub> <span>&#8712;</span> M are two embeddings corresponding to the same image x<sub>i</sub>i. Then,
+We assume w<sub>i</sub> <span>&#8712;</span> M' and u<sub>i</sub> <span>&#8712;</span> M are two embeddings corresponding to the same image x<sub>i</sub>. Then,
     for image x<sub>i</sub>, we find NNs of w<sub>i</sub> in M' and use their indices to construct the search space C from M. 
     As a result, C will maintain good purity while being diverse.
   </p>
+  
+  
+  <h5 id="Method"><b>Semi-Supervised Settings:</b></h5>
+  
+  <p>
+    In this setting, we assume access to a small labeled and a large unlabeled dataset. We train a simple classifier using the current 
+    embeddings of the labeled data and use the classifier to pseudo-label the unlabeled data. Then, similar to the supervised setting, 
+    we construct C to be the elements of M that share the pseudo-label with the target. Again, this method increases the diversity 
+    of C while maintaining high purity. To keep the purity high, we enforce the constraint only when the pseudo-label is very confident 
+    (the probability is above a threshold.) For the samples with non-confident pseudo-label, we relax the constraint resulting in regular 
+    MSF loss (i.e., C = M.) Moreover to reduce the computational overhead of pseudo-labeling, we cache the embeddings throughout the epoch
+    and train a 2-layer MLP classifier using the frozen features in the middle and end of each epoch. 
+  </p>
+  
   
 <h5 id="results"><b>Self-supervised Learning Results</b></h5>
 
