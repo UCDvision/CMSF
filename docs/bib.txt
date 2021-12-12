@@ -1,8 +1,8 @@
-@InProceedings{Koohpayegani_2021_ICCV,
-    author    = {Koohpayegani, Soroush Abbasi and Tejankar, Ajinkya and Pirsiavash, Hamed},
-    title     = {Mean Shift for Self-Supervised Learning},
-    booktitle = {Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV)},
-    month     = {October},
-    year      = {2021},
-    pages     = {10326-10335}
+@misc{tejankar2021constrained,
+      title={Constrained Mean Shift Using Distant Yet Related Neighbors for Representation Learning}, 
+      author={Ajinkya Tejankar and Soroush Abbasi Koohpayegani and KL Navaneet and Kossar Pourahmadi and Akshayvarun Subramanya and Hamed Pirsiavash},
+      year={2021},
+      eprint={2112.04607},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV}
 }
