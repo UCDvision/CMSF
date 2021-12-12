@@ -22,8 +22,8 @@ title: Constrained Mean Shift Using Distant Yet Related Neighbors for Representa
 
 <div class="menu">
   <ul style="margin: 0px;">
-      <li><a href='https://www.csee.umbc.edu/~hpirsiav/papers/MSF_iccv21.pdf'>[Paper]</a></li>
-      <li><a href='{{ site.baseurl }}/assets/images/MSF_poster.pdf'>[Poster]</a></li>
+      <li><a href='https://arxiv.org/abs/2112.04607'>[Paper]</a></li>
+      <li><a href='{{ site.baseurl }}/assets/images/CMSF_poster.pdf'>[Poster]</a></li>
       <li><a href='https://github.com/UCDvision/CMSF'>[Code]</a></li>
       <li><a href='/CMSF/bib.txt'>[Bib]</a></li>
   </ul>
@@ -128,6 +128,29 @@ We assume w<sub>i</sub> <span>&#8712;</span> M' and u<sub>i</sub> <span>&#8712;<
   <p style="text-align:center;"><img src="{{ site.baseurl }}/assets/images/2q_teaser.gif" width="50%" alt style></p>
 
   
+  <p>
+We use epoch 100 of CMSF-2Q to visualize Top-5 NN from constrained and unconstrained memory bank. 
+    First row is NNs from the second memory bank M', that is exactly the same as M but containing 
+    a different augmentation. Samples of the second row are NNs from second memory bank M' in M, 
+    therefore they are different augmentations of first row. Additionally, We show their rank in M
+    as well. The last row is NNs from the first memory bank M. Note that constrained samples in M 
+    (second row), have high rank while they are semantically similar to the target.
+  </p>
+  
+  <p style="text-align:center;"><img src="{{ site.baseurl }}/assets/images/cmsf_vis_sup_2q.jpg" width="100%" alt style></p>
+  
+  
+  <p>
+    <strong> Histogram of constrained samples:</strong>
+ We plot the histogram of constrained sample ranks in multiple stages of training of both CMSF-2Q and CMSF-KM for comparison.
+    A large number of distant neighbors are part of constraint in the early stages of training while there is a higher overlap
+    between constrained and unconstrained NN set towards the end of training. CMSF-2Q retrieves farther neighbors compared to CMSF-KM.
+  
+  </p>
+  
+  <p style="text-align:center;"><img src="{{ site.baseurl }}/assets/images/cmsf_hist_comp.jpg" width="100%" alt style></p>
+  
+  
   <h5 id="Method"><b>Semi-Supervised Settings:</b></h5>
   
   <p>
@@ -179,6 +202,7 @@ We assume w<sub>i</sub> <span>&#8712;</span> M' and u<sub>i</sub> <span>&#8712;<
     </p>
   
   
+  <h5 id="results"><b>Semi-supervised Learning Results</b></h5>
   <p>
       <strong>  Semi-supervised learning on ImageNet dataset with 10% labels:</strong>
           
