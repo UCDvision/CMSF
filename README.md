@@ -8,13 +8,11 @@ Official Code for "Constrained Mean Shift Using Distant Yet Related Neighbors fo
 
 
 ```
-@misc{tejankar2021constrained,
+@inproceedings{navaneet2022constrained,
       title={Constrained Mean Shift Using Distant Yet Related Neighbors for Representation Learning}, 
-      author={Ajinkya Tejankar and Soroush Abbasi Koohpayegani and KL Navaneet and Kossar Pourahmadi and Akshayvarun Subramanya and Hamed Pirsiavash},
-      year={2021},
-      eprint={2112.04607},
-      archivePrefix={arXiv},
-      primaryClass={cs.CV}
+      author={KL Navaneet and Soroush Abbasi Koohpayegani and Ajinkya Tejankar and Kossar Pourahmadi and Akshayvarun Subramanya and Hamed Pirsiavash},
+      year={2022},
+      booktitle={European Conference on Computer Vision (ECCV)}
 }
 
 ```
