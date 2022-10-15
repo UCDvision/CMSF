@@ -30,7 +30,7 @@ Install PyTorch and ImageNet dataset following the [official PyTorch ImageNet tr
 - Install PyTorch ([pytorch.org](http://pytorch.org))
 
 
-To run NN and CMSF-KM, you require to install FAISS. 
+You will need to install FAISS to run k-NN evaluation and CMSF-KM training codes.
 
 FAISS: 
 - Install FAISS ([https://github.com/facebookresearch/faiss/blob/master/INSTALL.md](https://github.com/facebookresearch/faiss/blob/master/INSTALL.md))
