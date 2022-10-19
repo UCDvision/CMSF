@@ -12,13 +12,12 @@ import pdb
 
 import torch
 import torch.backends.cudnn as cudnn
-import numpy as np
 
-from data_loader import get_train_loader
+from .data_loader import get_train_loader
 from pseudo_cmsf import PseudoCMSF
 from pseudo_label_train import train_pseudo_lbl
-from util import adjust_learning_rate, AverageMeter
-from tools import get_logger
+from .util import adjust_learning_rate, AverageMeter
+from .tools import get_logger
 
 
 def parse_option():
@@ -35,7 +34,8 @@ def parse_option():
                         help='use full or subset of the dataset')
     parser.add_argument('--sup-split-file', type=str, default=None,
                         help='path to supervised images list (text file)')
-    parser.add_argument('--debug', action='store_true', help='whether in debug mode or not')
+    parser.add_argument('--debug', action='store_true',
+                        help='whether in debug mode or not')
 
     parser.add_argument('--print_freq', type=int, default=100,
                         help='print frequency')
@@ -130,7 +130,6 @@ def parse_option():
 
 def main():
     args = parse_option()
-    # os.makedirs(args.checkpoint_path, exist_ok=True)
 
     save_dir = join(args.base_dir, 'semi_sup_cmsf/exp') 
     args.ckpt_dir = join(save_dir, args.exp, 'checkpoints')
@@ -267,7 +266,7 @@ def main():
 
 def train(epoch, train_loader, pseudo_cmsf, optimizer, opt, logger, train_pseudo_loader):
     """
-    one epoch training for CompReSS
+    One epoch training for Semi-supervised CMSF
     """
     pseudo_cmsf.train()
     pseudo_cmsf.mlp_head.eval()

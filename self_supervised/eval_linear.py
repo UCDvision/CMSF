@@ -18,8 +18,8 @@ import torchvision.models as models
 import torch.nn.functional as F
 
 from tools import *
-from models.alexnet import AlexNet
-from models.mobilenet import MobileNetV2
+# from models.alexnet import AlexNet
+# from models.mobilenet import MobileNetV2
 
 
 parser = argparse.ArgumentParser(description='Unsupervised distillation')

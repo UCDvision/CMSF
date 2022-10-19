@@ -3,20 +3,19 @@ import os
 import sys
 import time
 import argparse
-import random
 
 import torch
 import torch.nn as nn
 import torch.backends.cudnn as cudnn
-from torchvision import transforms, datasets
 
-from PIL import ImageFilter
-from util import adjust_learning_rate, AverageMeter, subset_classes
-import models.resnet as resnet
+from .util import adjust_learning_rate, AverageMeter, subset_classes
+import .models.resnet as resnet
+from .models.mlp_arch import get_mlp
 from tools import get_logger
+from .util import get_shuffle_ids
+from .dataloader import get_train_loader
 
 import pdb
-import faiss
 
 
 def parse_option():
@@ -52,7 +51,7 @@ def parse_option():
     parser.add_argument('--momentum', type=float, default=0.99)
     parser.add_argument('--mem_bank_size', type=int, default=128000)
     parser.add_argument('--topk', type=int, default=5)
-    parser.add_argument('--num_clusters', type=int, default=50000)
+    parser.add_argument('--topkp', type=int, default=10)
     parser.add_argument('--weak_strong', action='store_true',
                         help='whether to strong/strong or weak/strong augmentation')
 
@@ -76,53 +75,16 @@ def parse_option():
     return opt
 
 
-# Extended version of ImageFolder to return index of image too.
-class ImageFolderEx(datasets.ImageFolder):
-    def __getitem__(self, index):
-        sample, target = super(ImageFolderEx, self).__getitem__(index)
-        return index, sample, target
-
-
-def get_mlp(inp_dim, hidden_dim, out_dim):
-    mlp = nn.Sequential(
-        nn.Linear(inp_dim, hidden_dim),
-        nn.BatchNorm1d(hidden_dim),
-        nn.ReLU(inplace=True),
-        nn.Linear(hidden_dim, out_dim),
-    )
-    return mlp
-
-
-def faiss_kmeans(feats, nmb_clusters):
-    feats = feats.numpy()
-    d = feats.shape[-1]
-    clus = faiss.Clustering(d, nmb_clusters)
-    clus.niter = 20
-    clus.max_points_per_centroid = 10000000
-
-    index = faiss.IndexFlatL2(d)
-    co = faiss.GpuMultipleClonerOptions()
-    co.useFloat16 = True
-    co.shard = True
-    index = faiss.index_cpu_to_all_gpus(index, co)
-
-    # perform the training
-    clus.train(feats, index)
-    _, train_a = index.search(feats, 1)
-
-    return list(train_a[:, 0])
-
-
-class ConstrainedMeanShiftKM(nn.Module):
-    def __init__(self, arch, m=0.99, mem_bank_size=128000, topk=5, dataset_size=100, num_clusters=50000):
-        super(DCMeanShift, self).__init__()
+class ConstrainedMeanShift2Q(nn.Module):
+    def __init__(self, arch, m=0.99, mem_bank_size=128000, topk=5, dataset_size=100, topkp=10):
+        super(ConstrainedMeanShift2Q, self).__init__()
 
         # save parameters
         self.m = m
         self.mem_bank_size = mem_bank_size
         self.topk = topk
         self.dataset_size = dataset_size
-        self.num_clusters = num_clusters
+        self.topkp = topkp
 
         # create encoders and projection layers
         # both encoders should have same arch
@@ -149,10 +111,11 @@ class ConstrainedMeanShiftKM(nn.Module):
             param_t.requires_grad = False
 
         print("using mem-bank size {}".format(self.mem_bank_size))
+        print("# Queues {}".format(self.num_queues))
         # setup queue (For Storing Random Targets)
         self.register_buffer('queue', torch.randn(self.mem_bank_size, proj_dim))
-        self.register_buffer('pool', torch.randn(self.dataset_size, proj_dim))
-        self.register_buffer('pseudo_labels', 0*torch.ones(self.dataset_size).long())
+        self.register_buffer('pool', torch.randn(2, self.dataset_size, proj_dim))
+        self.register_buffer('pool_qindex', torch.zeros(self.dataset_size).long())
         # normalize the queue embeddings
         self.queue = nn.functional.normalize(self.queue, dim=1)
         # initialize the labels queue (For Purity measurement)
@@ -173,12 +136,6 @@ class ConstrainedMeanShiftKM(nn.Module):
         self.predict_q = torch.nn.DataParallel(self.predict_q)
 
     @torch.no_grad()
-    def cluster(self):
-        print('start clustering ... num clusters: {}'.format(self.num_clusters))
-        cluster_assignment = faiss_kmeans(self.pool.clone().cpu(), self.num_clusters)
-        self.pseudo_labels = torch.tensor(cluster_assignment).cuda()
-
-    @torch.no_grad()
     def _dequeue_and_enqueue(self, targets, labels, indices):
         batch_size = targets.shape[0]
 
@@ -186,7 +143,8 @@ class ConstrainedMeanShiftKM(nn.Module):
         assert self.mem_bank_size % batch_size == 0 
 
         # replace the targets at ptr (dequeue and enqueue)
-        self.pool[indices, :] = targets
+        self.pool[self.pool_qindex[indices], indices, :] = targets
+        self.pool_qindex[indices] = (self.pool_qindex[indices] + 1) % 2
         self.queue[ptr:ptr + batch_size] = targets
         self.labels[ptr:ptr + batch_size] = labels
         self.index_queue[ptr:ptr + batch_size] = indices
@@ -216,136 +174,47 @@ class ConstrainedMeanShiftKM(nn.Module):
 
             # undo shuffle
             current_target = current_target[reverse_ids].detach()
-
-            # update the memory-bank
+            # update the memory bank
             self._dequeue_and_enqueue(current_target, labels, indices)
 
         targets = self.queue.clone().detach()
-
-        # get pseudo of target and memory bank samples
-        current_target_pseudo_labels = self.pseudo_labels[indices]
-        targets_pseudo_labels = self.pseudo_labels[self.index_queue]
-
-        # create a mask to constrain the search space
-        b = current_target_pseudo_labels.shape[0]
-        m = targets_pseudo_labels.shape[0]
-        lx = current_target_pseudo_labels.unsqueeze(1).expand((b, m))
-        lm = targets_pseudo_labels.unsqueeze(0).expand((b, m))
-        msk = lx != lm
 
         # calculate distances between vectors
         dist_t = 2 - 2 * torch.einsum('bc,kc->bk', [current_target, targets])
         dist_q = 2 - 2 * torch.einsum('bc,kc->bk', [query, targets])
 
-        # select the k nearest neighbors [with smallest distance (largest=False)] based on current target
+        # select the k [topk] nearest neighbors [with smallest distance (largest=False)] based on current target
         _, unconstrained_nn_index = dist_t.topk(self.topk, dim=1, largest=False)
-
-        # select the k nearest neighbors based on constrained memory bank
-        dist_t[torch.where(msk)] = 5.0
-        _, constrained_nn_index = dist_t.topk(self.topk, dim=1, largest=False)
-
-        # calculate mean shift regression loss
-        nn_dist_q_constrained = torch.gather(dist_q, 1, constrained_nn_index)
         nn_dist_q_unconstrained = torch.gather(dist_q, 1, unconstrained_nn_index)
 
-        # purity based on memory bank
-        labels = labels.unsqueeze(1).expand(nn_dist_q.shape[0], nn_dist_q.shape[1])
+        # get the previous augmentation for target and memory bank samples
+        targets_prime = self.pool[self.pool_qindex[self.index_queue], self.index_queue, :]
+        current_target_prime = self.pool[self.pool_qindex[indices], indices, :]
+
+        # select the k' [topkp] nearest neighbors in previous memory bank
+        dist_t_prime = 2 - 2 * torch.einsum('bc,kc->bk', [current_target_prime, targets_prime])
+        _, nn_index_prime = dist_t_prime.topk(self.topkp, dim=1, largest=False)
+
+        # constrain the primary memory bank search space to NN samples of the previous memory bank
+        dist_prime = torch.zeros_like(dist_t)
+        dist_prime.scatter_(1, nn_index_prime, -5*torch.ones_like(dist_t))
+        dist_t += dist_prime
+        _, nn_index_constrained = dist_t.topk(self.topk, dim=1, largest=False)
+
+        # calculate mean shift regression loss
+        nn_dist_q_constrained = torch.gather(dist_q, 1, nn_index_constrained)
+        loss = ((nn_dist_q_constrained.sum(dim=1) / self.topk).mean()
+                + (nn_dist_q_unconstrained.sum(dim=1) / self.topk).mean()) / 2.0
+
+        # purity based on first queue
+        labels = labels.unsqueeze(1).expand(nn_dist_q.shape[0], self.topk)
         labels_queue = self.labels.clone().detach()
         labels_queue = labels_queue.unsqueeze(0).expand((nn_dist_q.shape[0], self.mem_bank_size))
         labels_queue = torch.gather(labels_queue, dim=1, index=unconstrained_nn_index)
         matches = (labels_queue == labels).float()
         purity = (matches.sum(dim=1) / self.topk).mean()
 
-        loss = ((nn_dist_q_constrained.sum(dim=1) / self.topk).mean()
-                + (nn_dist_q_unconstrained.sum(dim=1) / self.topk).mean()) / 2.0
-
         return loss, purity
-
-
-def get_shuffle_ids(bsz):
-    """generate shuffle ids for ShuffleBN"""
-    forward_inds = torch.randperm(bsz).long().cuda()
-    backward_inds = torch.zeros(bsz).long().cuda()
-    value = torch.arange(bsz).long().cuda()
-    backward_inds.index_copy_(0, forward_inds, value)
-    return forward_inds, backward_inds
-
-
-class TwoCropsTransform:
-    """Take two random crops of one image as the query and target."""
-    def __init__(self, weak_transform, strong_transform):
-        self.weak_transform = weak_transform
-        self.strong_transform = strong_transform
-        print(self.weak_transform)
-        print(self.strong_transform)
-
-    def __call__(self, x):
-        q = self.strong_transform(x)
-        t = self.weak_transform(x)
-        return [q, t]
-
-
-class GaussianBlur(object):
-    """Gaussian blur augmentation in SimCLR https://arxiv.org/abs/2002.05709"""
-
-    def __init__(self, sigma):
-        self.sigma = sigma
-
-    def __call__(self, x):
-        sigma = random.uniform(self.sigma[0], self.sigma[1])
-        x = x.filter(ImageFilter.GaussianBlur(radius=sigma))
-        return x
-
-
-# Create train loader
-def get_train_loader(opt):
-    traindir = os.path.join(opt.data, 'train')
-    mean = [0.485, 0.456, 0.406]
-    std = [0.229, 0.224, 0.225]
-    normalize = transforms.Normalize(mean=mean, std=std)
-
-    augmentation_strong = [
-        transforms.RandomResizedCrop(224, scale=(0.2, 1.)),
-        transforms.RandomApply([
-            transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)  # not strengthened
-        ], p=0.8),
-        transforms.RandomGrayscale(p=0.2),
-        transforms.RandomApply([GaussianBlur([.1, 2.])], p=0.5),
-        transforms.RandomHorizontalFlip(),
-        transforms.ToTensor(),
-        normalize
-    ]
-
-    augmentation_weak = [
-        transforms.RandomResizedCrop(224, scale=(0.2, 1.)),
-        transforms.RandomHorizontalFlip(),
-        transforms.ToTensor(),
-        normalize,
-    ]
-
-    if opt.weak_strong:
-        train_dataset = ImageFolderEx(
-            traindir,
-            TwoCropsTransform(transforms.Compose(augmentation_weak), transforms.Compose(augmentation_strong))
-        )
-    else:
-        train_dataset = ImageFolderEx(
-            traindir,
-            TwoCropsTransform(transforms.Compose(augmentation_strong), transforms.Compose(augmentation_strong))
-        )
-
-    if opt.dataset == 'imagenet100':
-        subset_classes(train_dataset, num_classes=100)
-
-    print('==> train dataset')
-    print(train_dataset)
-
-    # NOTE: remove drop_last
-    train_loader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=opt.batch_size, shuffle=True,
-        num_workers=opt.num_workers, pin_memory=True, drop_last=True)
-
-    return train_loader
 
 
 def main():
@@ -370,15 +239,14 @@ def main():
 
     train_loader = get_train_loader(args)
 
-    mean_shift = ConstrainedMeanShiftKM(
+    mean_shift = ConstrainedMeanShift2Q(
         args.arch,
         m=args.momentum,
         mem_bank_size=args.mem_bank_size,
         topk=args.topk,
         dataset_size=len(train_loader.dataset),
-        num_clusters=args.num_clusters
+        topkp=args.topkp
     )
-
     mean_shift.data_parallel()
     mean_shift = mean_shift.cuda()
     print(mean_shift)
@@ -408,13 +276,16 @@ def main():
     if args.resume:
         print('==> resume from checkpoint: {}'.format(args.resume))
         ckpt = torch.load(args.resume, map_location='cpu')
-        # sd = ckpt['state_dict']
-        # sd = {k.replace('module.', ''): v for k, v in sd.items()}
         print('==> resume from epoch: {}'.format(ckpt['epoch']))
+
         mean_shift.load_state_dict(ckpt['state_dict'], strict=True)
+        mean_shift.queue_ptr = torch.zeros(1, dtype=torch.long)
+
         optimizer.load_state_dict(ckpt['optimizer'])
         args.start_epoch = ckpt['epoch'] + 1
+        torch.cuda.empty_cache()
 
+    # routine
     for epoch in range(args.start_epoch, args.epochs + 1):
 
         adjust_learning_rate(epoch, args, optimizer)
@@ -423,7 +294,7 @@ def main():
         time1 = time.time()
 
         train(epoch, train_loader, mean_shift, optimizer, args)
-        mean_shift.cluster()
+
         time2 = time.time()
         print('epoch {}, total time {:.2f}'.format(epoch, time2 - time1))
 

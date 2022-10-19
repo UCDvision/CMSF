@@ -4,8 +4,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-import models.resnet as resnet
-from mlp_arch import get_mlp, get_mlp_3l
+import .models.resnet as resnet
+from .models.mlp_arch import get_mlp, get_mlp_3l
+
+from .util import get_shuffle_ids
 
 
 class PseudoCMSF(nn.Module):
@@ -278,14 +280,3 @@ class PseudoCMSF(nn.Module):
         acc_topk *= 100.
 
         return L, purity, purity_msf, acc, acc_topk, prob_topk
-
-
-def get_shuffle_ids(bsz):
-    """generate shuffle ids for ShuffleBN"""
-    forward_inds = torch.randperm(bsz).long().cuda()
-    backward_inds = torch.zeros(bsz).long().cuda()
-    value = torch.arange(bsz).long().cuda()
-    backward_inds.index_copy_(0, forward_inds, value)
-    return forward_inds, backward_inds
-
-

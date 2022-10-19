@@ -1,7 +1,5 @@
-import torch
 import torch.nn as nn
 import math
-import numpy as np
 import torch.utils.model_zoo as model_zoo
 
 __all__ = ['ResNet', 'resnet18', 'resnet34', 'resnet50', 'resnet101',
@@ -20,9 +18,6 @@ def conv3x3(in_planes, out_planes, stride=1):
     """3x3 convolution with padding"""
     return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride,
                      padding=1, bias=False)
-
-
-
 
 
 class BasicBlock(nn.Module):
@@ -112,7 +107,7 @@ class ResNet(nn.Module):
         self.layer2 = self._make_layer(block, self.base * 2, layers[1], stride=2)
         self.layer3 = self._make_layer(block, self.base * 4, layers[2], stride=2)
         self.layer4 = self._make_layer(block, self.base * 8, layers[3], stride=2)
-        self.avgpool = nn.AvgPool2d(7, stride=1)
+        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
         self.fc = nn.Linear(self.base * 8 * block.expansion, fc_dim)
 
         for m in self.modules():
@@ -171,7 +166,6 @@ class ResNet(nn.Module):
         return x
 
 
-
 def resnet18(fc_dim=128, pretrained=False, **kwargs):
     """Constructs a ResNet-18 model.
     Args:
@@ -181,9 +175,6 @@ def resnet18(fc_dim=128, pretrained=False, **kwargs):
     if pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['resnet18']))
     return model
-
-
-
 
 
 def resnet50(fc_dim=128,pretrained=False, **kwargs):

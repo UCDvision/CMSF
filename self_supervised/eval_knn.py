@@ -24,8 +24,8 @@ import faiss
 
 from tools import *
 from models.resnet import resnet18, resnet50
-from models.alexnet import AlexNet as alexnet
-from models.mobilenet import MobileNetV2 as mobilenet
+# from models.alexnet import AlexNet as alexnet
+# from models.mobilenet import MobileNetV2 as mobilenet
 # from models.resnet_swav import resnet50w5, resnet50 as swav_resnet50
 # from models.resnet_byol import resnet50 as byol_resnet50
 # from models.resnet_gn_ws import l_resnet18, l_resnet50
@@ -42,8 +42,8 @@ parser.add_argument('-j', '--workers', default=8, type=int,
                     help='number of data loading workers (default: 4)')
 parser.add_argument('-a', '--arch', type=str, default='alexnet',
                         choices=['alexnet' , 'resnet18' , 'resnet50', 'mobilenet' ,
-                                 'l_resnet18', 'l_resnet50', 
-                                 'two_resnet50', 'one_resnet50', 
+                                 'l_resnet18', 'l_resnet50',
+                                 'two_resnet50', 'one_resnet50',
                                  'moco_alexnet' , 'moco_resnet18' , 'moco_resnet50', 'moco_mobilenet', 'resnet50w5', 'teacher_resnet18',  'teacher_resnet50',
                                  'sup_alexnet' , 'sup_resnet18' , 'sup_resnet50', 'sup_mobilenet', 'pt_alexnet', 'swav_resnet50', 'byol_resnet50'])
 parser.add_argument('-b', '--batch-size', default=256, type=int,
@@ -394,7 +394,7 @@ def get_loaders(dataset_dir, bs, workers, dataset='imagenet'):
 def main_worker(args):
 
     start = time.time()
-    # Get train/val loader 
+    # Get train/val loader
     # ---------------------------------------------------------------
     train_loader, val_loader = get_loaders(args.data, args.batch_size, args.workers, args.dataset)
 

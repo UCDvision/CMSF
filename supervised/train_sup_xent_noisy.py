@@ -3,16 +3,15 @@ import os
 import sys
 import time
 import argparse
-import random
 
 import torch
 import torch.nn as nn
 import torch.backends.cudnn as cudnn
 from torchvision import transforms, datasets, models
 
-from PIL import ImageFilter
-from util import adjust_learning_rate, AverageMeter, subset_classes
-from tools import get_logger, accuracy
+from .util import adjust_learning_rate, AverageMeter, subset_classes
+from .tools import get_logger, accuracy
+from .dataloader import get_train_loader
 
 
 def parse_option():
@@ -65,95 +64,6 @@ def parse_option():
     return opt
 
 
-class GaussianBlur(object):
-    """Gaussian blur augmentation in SimCLR https://arxiv.org/abs/2002.05709"""
-
-    def __init__(self, sigma):
-        self.sigma = sigma
-
-    def __call__(self, x):
-        sigma = random.uniform(self.sigma[0], self.sigma[1])
-        x = x.filter(ImageFilter.GaussianBlur(radius=sigma))
-        return x
-
-
-# Extended version of ImageFolder to return index of image too.
-class ImageFolder(datasets.ImageFolder):
-    def __init__(self, root, corrup_split_file, *args, **kwargs):
-        super(ImageFolder, self).__init__(root, *args, **kwargs)
-
-        with open(corrup_split_file, 'r') as f:
-            samples = [line.strip().split(' ') for line in f.readlines()]
-
-        self.samples = [(os.path.join(root, pth), int(cls)) for pth, cls in samples]
-
-    def __getitem__(self, index):
-        sample, target = super(ImageFolder, self).__getitem__(index)
-        return sample, target
-
-
-# Create train loader
-def get_loaders(opt):
-    mean = [0.485, 0.456, 0.406]
-    std = [0.229, 0.224, 0.225]
-    normalize = transforms.Normalize(mean=mean, std=std)
-
-    if opt.std_aug:
-        train_aug = transforms.Compose([
-            transforms.RandomResizedCrop(224),
-            transforms.RandomHorizontalFlip(),
-            transforms.ToTensor(),
-            normalize,
-        ])
-    else:
-        train_aug = transforms.Compose([
-            transforms.RandomResizedCrop(224, scale=(0.2, 1.)),
-            transforms.RandomApply([
-                transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)  # not strengthened
-            ], p=0.8),
-            transforms.RandomGrayscale(p=0.2),
-            transforms.RandomApply([GaussianBlur([.1, 2.])], p=0.5),
-            transforms.RandomHorizontalFlip(),
-            transforms.ToTensor(),
-            normalize
-        ])
-
-    val_aug = transforms.Compose([
-        transforms.Resize(256),
-        transforms.CenterCrop(224),
-        transforms.ToTensor(),
-        normalize,
-    ])
-
-    corrup_split_file = os.path.join('subsets', 'corrupt_{}.txt'.format(opt.corrupt_split))
-
-    train_dataset = ImageFolder(os.path.join(opt.data, 'train'), corrup_split_file, train_aug)
-    # val_dataset = ImageFolder(os.path.join(opt.data, 'val'), val_aug)
-
-    print('==> train dataset')
-    print(train_dataset)
-    # print('==> val dataset')
-    # print(val_dataset)
-
-    # NOTE: remove drop_last
-    train_loader = torch.utils.data.DataLoader(
-        train_dataset,
-        batch_size=opt.batch_size,
-        shuffle=True,
-        num_workers=opt.num_workers,
-        pin_memory=True,
-        drop_last=True)
-
-    # val_loader = torch.utils.data.DataLoader(
-    #     val_dataset,
-    #     batch_size=opt.batch_size,
-    #     shuffle=False,
-    #     num_workers=opt.num_workers,
-    #     pin_memory=True)
-
-    return train_loader
-
-
 global best_acc1
 
 
@@ -177,7 +87,7 @@ def main():
 
     print(args)
 
-    train_loader = get_loaders(args)
+    train_loader = get_train_loader(args)
 
     model = models.__dict__[args.arch](num_classes=1000)
     model = nn.DataParallel(model).cuda()
@@ -213,13 +123,6 @@ def main():
         time1 = time.time()
         train(epoch, train_loader, model, criterion, optimizer, args)
 
-        # acc1 = validate(epoch, val_loader, model, criterion, optimizer, args)
-
-        # # remember best acc@1 and save checkpoint
-        # is_best = acc1 > best_acc1
-        # best_acc1 = max(acc1, best_acc1)
-        # print('==> current best accuracy: {:.2f}'.format(best_acc1))
-
         time2 = time.time()
         print('epoch {}, total time {:.2f}'.format(epoch, time2 - time1))
 
@@ -240,23 +143,6 @@ def main():
             # help release GPU memory
             del state
             torch.cuda.empty_cache()
-
-        # if is_best:
-        #     print('==> Saving best model ...')
-        #     state = {
-        #         'opt': args,
-        #         'state_dict': model.state_dict(),
-        #         'optimizer': optimizer.state_dict(),
-        #         'epoch': epoch,
-        #         'best_acc1': best_acc1,
-        #     }
-
-        #     save_file = os.path.join(args.checkpoint_path, 'model_best.pth')
-        #     torch.save(state, save_file)
-
-        #     # help release GPU memory
-        #     del state
-        #     torch.cuda.empty_cache()
 
 
 def train(epoch, train_loader, model, criterion, optimizer, opt):
