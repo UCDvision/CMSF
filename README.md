@@ -1,5 +1,6 @@
 # CMSF
-Official Code for "Constrained Mean Shift Using Distant Yet Related Neighbors for Representation Learning"
+Official Code for the [paper](https://arxiv.org/abs/2112.04607) "Constrained Mean Shift Using Distant Yet Related Neighbors for Representation Learning".
+Paper accepted at _European Conference on Computer Vision (ECCV), 2022_
 
 <p align="center">
   <img src="https://ucdvision.github.io/CMSF/assets/images/cmsf_teaser.gif" width="95%">
@@ -30,34 +31,20 @@ Install PyTorch and ImageNet dataset following the [official PyTorch ImageNet tr
 - Install PyTorch ([pytorch.org](http://pytorch.org))
 
 
-You will need to install FAISS to run k-NN evaluation and CMSF-KM training codes.
+You will need to install FAISS to run k-NN evaluation code.
 
 FAISS: 
 - Install FAISS ([https://github.com/facebookresearch/faiss/blob/master/INSTALL.md](https://github.com/facebookresearch/faiss/blob/master/INSTALL.md))
 
-
-# Training Self-Supservised CMSF-KM
-
+# Training and Evaluating Semi-supervised CMSF
+Modify the arguments in the ```run_semisup_fullprecision.sh``` file and run the following command:
+```shell
+bash run_semisup_fullprecision.sh
 ```
-python self_supervised/train_msf_km.py \
-  --cos \
-  --weak_strong \
-  --learning_rate 0.05 \
-  --epochs 200 \
-  --arch resnet50 \
-  --topk 5 \
-  --momentum 0.99 \
-  --mem_bank_size 128000 \
-  --num_clusters 50000 \
-  --checkpoint_path <CHECKPOINT PATH> \
-  <DATASET PATH>
-  
-```
+The script includes code for training the semi-supervised version and performing the k-NN and linear evaluation on the final checkpoint. Modify the arguments to run only the training / testing codes.
 
-  
-  
 
-# Training Self-Supservised CMSF-2Q
+# Training Self-supservised CMSF-2Q
 
 ```
 python self_supervised/train_msf_2q.py \
@@ -74,7 +61,6 @@ python self_supervised/train_msf_2q.py \
   <DATASET PATH>
   
 ```
-
 
 
 # Training Supservised 
