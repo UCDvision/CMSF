@@ -1,4 +1,4 @@
-# CMSF
+# Constrained Mean Shift (CMSF)
 Official Code for the [paper](https://arxiv.org/abs/2112.04607) "Constrained Mean Shift Using Distant Yet Related Neighbors for Representation Learning".
 Paper accepted at _European Conference on Computer Vision (ECCV), 2022_
 
