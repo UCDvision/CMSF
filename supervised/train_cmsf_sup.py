@@ -3,16 +3,18 @@ import os
 import sys
 import time
 import argparse
+from os.path import join
+import json
 
 import torch
 import torch.nn as nn
 import torch.backends.cudnn as cudnn
 
-from .util import adjust_learning_rate, AverageMeter, subset_classes, get_shuffle_ids
-import .models.resnet as resnet
-from .models.mlp_arch import get_mlp
-from .tools import get_logger
-from .dataloader import get_train_loader
+from util import adjust_learning_rate, AverageMeter, subset_classes, get_shuffle_ids
+import models.resnet as resnet
+from models.mlp_arch import get_mlp
+from tools import get_logger
+from data_loader import get_train_loader
 
 
 def parse_option():
@@ -20,6 +22,10 @@ def parse_option():
     parser = argparse.ArgumentParser('argument for training')
 
     parser.add_argument('data', type=str, help='path to dataset')
+    parser.add_argument('--base-dir', default='./',
+                        help='projects base directory, different for vision and ada servers')
+    parser.add_argument('--exp', default='temp',
+                        help='experiment root directory')
     parser.add_argument('--dataset', type=str, default='imagenet',
                         choices=['imagenet', 'imagenet100'],
                         help='use full or subset of the dataset')
@@ -57,9 +63,6 @@ def parse_option():
 
     # GPU setting
     parser.add_argument('--gpu', default=None, type=int, help='GPU id to use.')
-
-    parser.add_argument('--checkpoint_path', default='output/mean_shift_default', type=str,
-                        help='where to save checkpoints. ')
 
     opt = parser.parse_args()
 
@@ -202,12 +205,24 @@ class MeanShift(nn.Module):
 
 def main():
     args = parse_option()
-    os.makedirs(args.checkpoint_path, exist_ok=True)
+
+    save_dir = join(args.base_dir, 'exp/supervised_cmsf')
+    args.ckpt_dir = join(save_dir, args.exp, 'checkpoints')
+    args.logs_dir = join(save_dir, args.exp, 'logs')
+    if not os.path.exists(args.ckpt_dir):
+        os.makedirs(args.ckpt_dir)
+    if not os.path.exists(args.logs_dir):
+        os.makedirs(args.logs_dir)
+    args_file = join(args.logs_dir, 'train_args.json')
+    s = '*' * 50
+    with open(args_file, 'a') as f:
+        json.dump(s, f)
+        json.dump(vars(args), f, indent=4)
 
     if not args.debug:
         os.environ['PYTHONBREAKPOINT'] = '0'
         logger = get_logger(
-            logpath=os.path.join(args.checkpoint_path, 'logs'),
+            logpath=os.path.join(args.logs_dir, 'logs'),
             filepath=os.path.abspath(__file__)
         )
 
@@ -285,7 +300,7 @@ def main():
                 'epoch': epoch,
             }
 
-            save_file = os.path.join(args.checkpoint_path, 'ckpt_epoch_{epoch}.pth'.format(epoch=epoch))
+            save_file = os.path.join(args.ckpt_dir, 'ckpt_epoch_{epoch}.pth'.format(epoch=epoch))
             torch.save(state, save_file)
 
             # help release GPU memory

@@ -1,1 +1,3 @@
 ./changes.txt
+__pycache__/
+exp/

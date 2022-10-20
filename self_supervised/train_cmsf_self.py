@@ -3,19 +3,20 @@ import os
 import sys
 import time
 import argparse
+import pdb
+from os.path import join
+import json
 
 import torch
 import torch.nn as nn
 import torch.backends.cudnn as cudnn
 
-from .util import adjust_learning_rate, AverageMeter, subset_classes
-import .models.resnet as resnet
-from .models.mlp_arch import get_mlp
+from util import adjust_learning_rate, AverageMeter, subset_classes
+import models.resnet as resnet
+from models.mlp_arch import get_mlp
 from tools import get_logger
-from .util import get_shuffle_ids
-from .dataloader import get_train_loader
-
-import pdb
+from util import get_shuffle_ids
+from data_loader import get_train_loader
 
 
 def parse_option():
@@ -23,6 +24,10 @@ def parse_option():
     parser = argparse.ArgumentParser('argument for training')
 
     parser.add_argument('data', type=str, help='path to dataset')
+    parser.add_argument('--base-dir', default='./',
+                        help='projects base directory, different for vision and ada servers')
+    parser.add_argument('--exp', default='temp',
+                        help='experiment root directory')
     parser.add_argument('--dataset', type=str, default='imagenet',
                         choices=['imagenet', 'imagenet100'],
                         help='use full or subset of the dataset')
@@ -62,9 +67,6 @@ def parse_option():
     # GPU setting
     parser.add_argument('--gpu', default=None, type=int, help='GPU id to use.')
 
-    parser.add_argument('--checkpoint_path', default='output/mean_shift_default', type=str,
-                        help='where to save checkpoints. ')
-
     opt = parser.parse_args()
 
     iterations = opt.lr_decay_epochs.split(',')
@@ -75,9 +77,9 @@ def parse_option():
     return opt
 
 
-class ConstrainedMeanShift2Q(nn.Module):
+class ConstrainedMeanShiftSelf(nn.Module):
     def __init__(self, arch, m=0.99, mem_bank_size=128000, topk=5, dataset_size=100, topkp=10):
-        super(ConstrainedMeanShift2Q, self).__init__()
+        super(ConstrainedMeanShiftSelf, self).__init__()
 
         # save parameters
         self.m = m
@@ -111,7 +113,7 @@ class ConstrainedMeanShift2Q(nn.Module):
             param_t.requires_grad = False
 
         print("using mem-bank size {}".format(self.mem_bank_size))
-        print("# Queues {}".format(self.num_queues))
+        print("# Queues {}".format(2))
         # setup queue (For Storing Random Targets)
         self.register_buffer('queue', torch.randn(self.mem_bank_size, proj_dim))
         self.register_buffer('pool', torch.randn(2, self.dataset_size, proj_dim))
@@ -207,9 +209,9 @@ class ConstrainedMeanShift2Q(nn.Module):
                 + (nn_dist_q_unconstrained.sum(dim=1) / self.topk).mean()) / 2.0
 
         # purity based on first queue
-        labels = labels.unsqueeze(1).expand(nn_dist_q.shape[0], self.topk)
+        labels = labels.unsqueeze(1).expand(nn_dist_q_unconstrained.shape[0], self.topk)
         labels_queue = self.labels.clone().detach()
-        labels_queue = labels_queue.unsqueeze(0).expand((nn_dist_q.shape[0], self.mem_bank_size))
+        labels_queue = labels_queue.unsqueeze(0).expand((nn_dist_q_unconstrained.shape[0], self.mem_bank_size))
         labels_queue = torch.gather(labels_queue, dim=1, index=unconstrained_nn_index)
         matches = (labels_queue == labels).float()
         purity = (matches.sum(dim=1) / self.topk).mean()
@@ -219,12 +221,24 @@ class ConstrainedMeanShift2Q(nn.Module):
 
 def main():
     args = parse_option()
-    os.makedirs(args.checkpoint_path, exist_ok=True)
+
+    save_dir = join(args.base_dir, 'exp/self_sup_cmsf')
+    args.ckpt_dir = join(save_dir, args.exp, 'checkpoints')
+    args.logs_dir = join(save_dir, args.exp, 'logs')
+    if not os.path.exists(args.ckpt_dir):
+        os.makedirs(args.ckpt_dir)
+    if not os.path.exists(args.logs_dir):
+        os.makedirs(args.logs_dir)
+    args_file = join(args.logs_dir, 'train_args.json')
+    s = '*' * 50
+    with open(args_file, 'a') as f:
+        json.dump(s, f)
+        json.dump(vars(args), f, indent=4)
 
     if not args.debug:
         os.environ['PYTHONBREAKPOINT'] = '0'
         logger = get_logger(
-            logpath=os.path.join(args.checkpoint_path, 'logs'),
+            logpath=os.path.join(args.logs_dir, 'logs'),
             filepath=os.path.abspath(__file__)
         )
 
@@ -239,7 +253,7 @@ def main():
 
     train_loader = get_train_loader(args)
 
-    mean_shift = ConstrainedMeanShift2Q(
+    mean_shift = ConstrainedMeanShiftSelf(
         args.arch,
         m=args.momentum,
         mem_bank_size=args.mem_bank_size,
@@ -308,7 +322,7 @@ def main():
                 'epoch': epoch,
             }
 
-            save_file = os.path.join(args.checkpoint_path, 'ckpt_epoch_{epoch}.pth'.format(epoch=epoch))
+            save_file = os.path.join(args.ckpt_dir, 'ckpt_epoch_{epoch}.pth'.format(epoch=epoch))
             torch.save(state, save_file)
 
             # help release GPU memory

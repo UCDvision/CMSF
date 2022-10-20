@@ -115,9 +115,6 @@ def parse_option():
     # GPU setting
     parser.add_argument('--gpu', default=None, type=int, help='GPU id to use.')
 
-    parser.add_argument('--checkpoint_path', default='output/mean_shift_default', type=str,
-                        help='where to save checkpoints. ')
-
     opt = parser.parse_args()
 
     iterations = opt.lr_decay_epochs.split(',')
@@ -131,7 +128,7 @@ def parse_option():
 def main():
     args = parse_option()
 
-    save_dir = join(args.base_dir, 'semi_sup_cmsf/exp') 
+    save_dir = join(args.base_dir, 'exp/semi_sup_cmsf')
     args.ckpt_dir = join(save_dir, args.exp, 'checkpoints')
     args.logs_dir = join(save_dir, args.exp, 'logs')
     if not os.path.exists(args.ckpt_dir):
