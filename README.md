@@ -44,7 +44,7 @@ bash run_semisup_fullprecision.sh
 The script includes code for training the semi-supervised version and performing the k-NN and linear evaluation on the final checkpoint. Modify the arguments to run only the training / testing codes.
 
 
-# Training Self-supservised CMSF-2Q
+# Training Self-supservised CMSF
 
 ```
 python self_supervised/train_msf_2q.py \
@@ -63,7 +63,7 @@ python self_supervised/train_msf_2q.py \
 ```
 
 
-# Training Supservised 
+# Training Supservised CMSF
 
 Following command can be used to train the CMSF(Supervised Learning) 
 
