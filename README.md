@@ -25,51 +25,23 @@ GPU version of the FAISS ([https://github.com/facebookresearch/faiss](https://gi
 pip install faiss-gpu
 ```
 
-## Training and Evaluating Semi-supervised CMSF
-Modify the arguments in the ```run_semisup_fullprecision.sh``` file and run the following command:
+## Training and Evaluation
+We provide scripts to run the self-supervised, semi-supervised and fully supervised CMSF experiments. The provided scripts include the default values of hyperparameters used to report the results in the paper. Modify the path to dataset to run the codes. 
+
+**Self-supservised CMSF**
+```shell
+bash run_selfsup.sh
+```
+
+**Semi-supervised CMSF**
 ```shell
 bash run_semisup_fullprecision.sh
 ```
 The script includes code for training the semi-supervised version and performing the k-NN and linear evaluation on the final checkpoint. Modify the arguments to run only the training / testing codes.
 
-
-## Training Self-supservised CMSF
-
-Following command can be used to train Self-supervised CMSF: 
-```
-python self_supervised/train_msf_2q.py \
-  --cos \
-  --weak_strong \
-  --learning_rate 0.05 \
-  --epochs 200 \
-  --arch resnet50 \
-  --topk 5 \
-  --momentum 0.99 \
-  --mem_bank_size 128000 \
-  --topkp 5 \
-  --checkpoint_path <CHECKPOINT PATH> \
-  <DATASET PATH>
-  
-```
-
-
-## Training Supservised CMSF
-
-Following command can be used to train Supervised CMSF: 
-
-```
-python supervised/train_sup_msf.py \
-  --cos \
-  --weak_strong \
-  --learning_rate 0.05 \
-  --epochs 200 \
-  --arch resnet50 \
-  --topk 10 \
-  --momentum 0.99 \
-  --mem_bank_size 128000 \
-  --checkpoint_path <CHECKPOINT PATH> \
-  <DATASET PATH>
-  
+**Supservised CMSF**
+```shell
+bash run_supervised.sh
 ```
 
 ## TODO
