@@ -4,10 +4,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-import .models.resnet as resnet
-from .models.mlp_arch import get_mlp, get_mlp_3l
+import models.resnet as resnet
+from models.mlp_arch import get_mlp, get_mlp_3l
 
-from .util import get_shuffle_ids
+from util import get_shuffle_ids
 
 
 class PseudoCMSF(nn.Module):

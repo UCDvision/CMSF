@@ -6,8 +6,9 @@ set -e
 base_dir='./'
 exp_name='exp_semi_sup_fullprec_1'
 dataset_path='path/to/imagenet/dataset'
+#dataset_path='/datasets/imagenet'
 
-CUDA_VISIBLE_DEVICES=0,1,2,3 python train_pseudo_cmsf.py \
+CUDA_VISIBLE_DEVICES=0,1,2,3 python -m semi_supervised.train_pseudo_cmsf \
    --base-dir $base_dir \
    --exp $exp_name\
    --learning_rate 0.05\
@@ -29,10 +30,10 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 python train_pseudo_cmsf.py \
    --mem_bank_size 128000 \
    --sup_mem_bank_size 128000 \
    --save_freq 10\
-   --sup-split-file 'imagenet_subsets/1p_10p/subsets/10percent.txt' \
+   --sup-split-file 'semi_supervised/imagenet_subsets/1p_10p/subsets/10percent.txt' \
    $dataset_path
 
-exp="$base_dir/semi_sup_cmsf/exp/$exp_name"
+exp="$base_dir/exp/semi_sup_cmsf/$exp_name"
 ep=200
 
 CUDA_VISIBLE_DEVICES=0,1 python eval_linear.py\

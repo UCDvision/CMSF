@@ -3,7 +3,8 @@ import time
 import torch
 import torch.nn.functional as F
 
-from util import AverageMeterV2, ProgressMeter, accuracy
+from util import AverageMeterV2, accuracy
+from tools import ProgressMeter
 
 
 def train_pseudo_lbl(pseudo_cmsf, train_val_loader, backbone, model, logger, opt):

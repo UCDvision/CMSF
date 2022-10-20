@@ -1,17 +1,16 @@
 import os
+import pdb
 
 import random
 import torch
 from torchvision import transforms, datasets
 from PIL import ImageFilter
 
-from .util import subset_classes
+from util import subset_classes
 
 
 # Extended version of ImageFolder to return index of image too.
 class ImageFolderEx(datasets.ImageFolder):
-    # def __init__(self, root, sup_split_file, only_sup, *args, **kwargs):
-        # super(ImageFolderEx, self).__init__(root, *args, **kwargs)
     def __init__(self, root, transforms, sup_split_file=None, only_sup=False, corrupt_split_file=None):
         super(ImageFolderEx, self).__init__(root, transforms)
 
@@ -145,7 +144,12 @@ def get_train_loader(opt):
     # Applicable only for semi-supervised setup.
     if 'sup_split_file' in vars(opt).keys():
         # Get dataloader for pseudo-labelling
-        sup_val_dataset = ImageFolderEx(traindir, opt.sup_split_file, True, transforms.Compose(augmentation_weak))
+        sup_val_dataset = ImageFolderEx(
+            root=traindir,
+            sup_split_file=opt.sup_split_file,
+            only_sup=True,
+            transforms=transforms.Compose(augmentation_weak)
+        )
         if opt.dataset == 'imagenet100':
             subset_classes(sup_val_dataset, num_classes=100)
         train_val_loader = torch.utils.data.DataLoader(
@@ -153,7 +157,6 @@ def get_train_loader(opt):
             batch_size=opt.batch_size, shuffle=False,
             num_workers=opt.num_workers, pin_memory=True,
         )
-
         return train_loader, train_val_loader
     else:
         return train_loader

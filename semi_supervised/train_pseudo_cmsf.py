@@ -13,11 +13,11 @@ import pdb
 import torch
 import torch.backends.cudnn as cudnn
 
-from .data_loader import get_train_loader
-from pseudo_cmsf import PseudoCMSF
-from pseudo_label_train import train_pseudo_lbl
-from .util import adjust_learning_rate, AverageMeter
-from .tools import get_logger
+from data_loader import get_train_loader
+from semi_supervised.pseudo_cmsf import PseudoCMSF
+from semi_supervised.pseudo_label_train import train_pseudo_lbl
+from util import adjust_learning_rate, AverageMeter
+from tools import get_logger
 
 
 def parse_option():
