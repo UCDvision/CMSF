@@ -35,6 +35,7 @@ The script includes code for training the semi-supervised version and performing
 
 ## Training Self-supservised CMSF
 
+Following command can be used to train Self-supervised CMSF: 
 ```
 python self_supervised/train_msf_2q.py \
   --cos \
@@ -54,7 +55,7 @@ python self_supervised/train_msf_2q.py \
 
 ## Training Supservised CMSF
 
-Following command can be used to train the CMSF(Supervised Learning) 
+Following command can be used to train Supervised CMSF: 
 
 ```
 python supervised/train_sup_msf.py \
@@ -74,6 +75,7 @@ python supervised/train_sup_msf.py \
 ## TODO
 
 - Add multi-crop codes.
+- Add results and pretrained models.
 
 ## Citation
 
